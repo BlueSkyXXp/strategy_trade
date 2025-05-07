@@ -19,6 +19,118 @@ class StockCache:
     YESTERDAY_LIMIT_UP_STOCKS = pd.DataFrame()  # 修改为 DataFrame 类型
     POSITION = []
     BALANCE = 0
+    # 新增交易日历缓存变量
+    TRADING_CALENDAR = pd.DataFrame()
+
+    # 今日买成功的股票池
+    TODAY_BUY_STOCKS = []
+
+    # 今日买入板块id和数量，是个map
+    TODAY_BUY_BOARD_IDS = {}
+
+    @classmethod
+    def set_today_buy_board_id(cls, board_id, num):
+        """
+        设置今日买入板块中指定板块id的股票数量
+        :param board_id: 板块id
+        :param num: 该板块中股票的数量
+        """
+        try:
+            if isinstance(board_id, (str, int)) and isinstance(num, (int, float)):
+                cls.TODAY_BUY_BOARD_IDS[board_id] = num
+                logger.info(f"成功设置板块 {board_id} 的今日买入股票数量为 {num}")
+            else:
+                logger.warning("传入的板块id或股票数量类型不正确，无法设置")
+        except Exception as e:
+            logger.error(f"设置板块 {board_id} 的今日买入股票数量时出错: {e}")
+
+    @classmethod
+    def append_today_buy_board_id(cls, board_id):
+        """
+        若今日买入板块id映射中不存在指定的board_id，则将其值设为1；若存在，则将其值加1
+        :param board_id: 板块id
+        """
+        try:
+            if isinstance(board_id, (str, int)):
+                cls.TODAY_BUY_BOARD_IDS[board_id] = cls.TODAY_BUY_BOARD_IDS.get(board_id, 0) + 1
+                logger.info(f"成功更新板块 {board_id} 的今日买入股票数量为 {cls.TODAY_BUY_BOARD_IDS[board_id]}")
+            else:
+                logger.warning("传入的板块id类型不正确，无法更新")
+        except Exception as e:
+            logger.error(f"更新板块 {board_id} 的今日买入股票数量时出错: {e}")
+
+    @classmethod
+    def get_today_buy_board_id(cls, board_id):
+        """
+        获取今日买入板块中指定板块id的股票数量
+        :param board_id: 板块id
+        :return: 该板块中股票的数量，如果不存在则返回0
+        """
+        try:
+            result = cls.TODAY_BUY_BOARD_IDS.get(board_id, 0)
+            if result == 0:
+                logger.info(f"板块 {board_id} 今日买入股票数量不存在，返回默认值 0")
+            else:
+                logger.info(f"成功从缓存获取板块 {board_id} 的今日买入股票数量为 {result}")
+            return result
+        except Exception as e:
+            logger.error(f"从缓存获取板块 {board_id} 的今日买入股票数量时出错: {e}")
+            return 0
+
+    @classmethod
+    def append_today_buy_stock(cls, stock):
+        """
+        向今日买成功的股票池中添加单个股票
+        :param stock: 要添加的股票
+        """
+        try:
+            cls.TODAY_BUY_STOCKS.append(stock)
+            logger.info(f"成功添加股票 {stock} 到今日买成功的股票池")
+        except Exception as e:
+            logger.error(f"向今日买成功的股票池添加股票 {stock} 时出错: {e}")
+
+    @classmethod
+    def remove_today_buy_stock(cls, stock):
+        """
+        从今日买成功的股票池中移除单个股票
+        :param stock: 要移除的股票
+        """
+        try:
+            if stock in cls.TODAY_BUY_STOCKS:
+                cls.TODAY_BUY_STOCKS.remove(stock)
+                logger.info(f"成功从今日买成功的股票池移除股票 {stock}")
+            else:
+                logger.warning(f"今日买成功的股票池中不存在股票 {stock}，无法移除")
+        except Exception as e:
+            logger.error(f"从今日买成功的股票池移除股票 {stock} 时出错: {e}")
+
+    @classmethod
+    def set_today_buy_stocks(cls, stocks):
+        """
+        设置今日买到的股票池
+        :param stocks: 今日买到的股票列表
+        """
+        try:
+            if isinstance(stocks, list):
+                cls.TODAY_BUY_STOCKS = stocks
+                logger.info("成功设置今日买到的股票池")
+            else:
+                logger.warning("传入的今日买到的股票数据不是列表类型，无法设置")
+        except Exception as e:
+            logger.error(f"设置今日买到的股票池时出错: {e}")
+
+    @classmethod
+    def get_today_buy_stocks(cls):
+        """
+        获取今日买到的股票池
+        :return: 今日买到的股票列表
+        """
+        try:
+            logger.info("成功从缓存获取今日买到的股票池")
+            return cls.TODAY_BUY_STOCKS
+        except Exception as e:
+            logger.error(f"从缓存获取今日买到的股票池时出错: {e}")
+            return []
 
     @classmethod
     def save_stocks_to_cache(cls, stocks, position=None, balance=None):
@@ -87,6 +199,9 @@ class StockCache:
             # 调用新的更新交易日历方法
             cls.update_trading_calendar()
 
+            # 清理今日买成功的股票池
+            cls.TODAY_BUY_STOCKS = []
+
         except Exception as e:
             logger.error(f"更新缓存时出错: {e}")
 
@@ -120,6 +235,34 @@ class StockCache:
         except Exception as e:
             logger.error(f"从缓存获取交易日历时出错: {e}")
             return pd.DataFrame()
+
+    @classmethod
+    def set_balance(cls, balance):
+        """
+        设置当前余额
+        :param balance: 新的余额值
+        """
+        try:
+            if isinstance(balance, (int, float)):
+                cls.BALANCE = balance
+                logger.info("成功设置当前余额")
+            else:
+                logger.warning("传入的余额数据不是数字类型，无法设置")
+        except Exception as e:
+            logger.error(f"设置当前余额时出错: {e}")
+
+    @classmethod
+    def get_balance(cls):
+        """
+        获取当前余额
+        :return: 当前余额值
+        """
+        try:
+            logger.info("成功从缓存获取当前余额")
+            return cls.BALANCE
+        except Exception as e:
+            logger.error(f"从缓存获取当前余额时出错: {e}")
+            return 0
 
 if __name__ == "__main__":
     try:

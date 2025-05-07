@@ -359,5 +359,26 @@ if __name__ == "__main__":
     # stock_data = stock_service.get_stock_yesterday_zt_pool(date=date)
     # print(stock_data)
 
-    bid_df = stock_service.stock_bid_ask_em(symbol="603068")
+    bid_df = stock_service.stock_bid_ask_em(symbol="300255")
+
+
+    # 确保 zt_price 是一个有效的数值
+    if 'f51' in bid_df.columns:
+        zt_price = bid_df['f51'].values[0] if len(bid_df['f51'].values) > 0 else 0
+
+    # 1万元，以涨停价买入，买入数量为100及其整数倍
+    if zt_price > 0:
+        # 修改此处，确保 buy_num 是 100 的整数倍
+        buy_num = (int(10000 / zt_price) // 100) * 100
+        print(buy_num)
+
+    print(zt_price)
+
+    # buy_resp = trade_api.buy_stock(stock_code=stock_code, price=zt_price / 100.0, amount=buy_num)
+    # if buy_resp and buy_resp.get('code') == 0:
+    #     logger.info("买入成功，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price / 100.0)
+    #     cache_manager.BALANCE = cache_manager.BALANCE - buy_num * zt_price / 100.0
+    # else:
+    #     logger.error("买入失败，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price / 100.0)
     print(bid_df)
+    print(buy_num)

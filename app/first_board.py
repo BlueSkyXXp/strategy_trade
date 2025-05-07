@@ -40,14 +40,21 @@ def run_job(cache_manager):
     logger.info("在交易时间，执行策略")
     # 从缓存中加载昨日涨停股票池、持仓和余额信息
     yesterday_limit_up_stocks, position, balance = cache_manager.load_stocks_from_cache()
-    logger.info("当前持仓：%s", position)
-    logger.info("当前余额：%s", balance)
 
     board_concept_df = stock_api.get_board_concept_stock_top_ten()
+    if board_concept_df is None or not isinstance(board_concept_df, pd.DataFrame) or board_concept_df.empty:
+        logger.error("未能获取有效的板块概念股票前十数据，跳过后续处理")
+        return
     # 每个板块获取前10只股票
     board_concept_stocks_df = pd.DataFrame()
     for _, row in board_concept_df.iterrows():
-        board_concept_stocks_df = pd.concat([board_concept_stocks_df, stock_api.get_board_concept_stock_cons_top_twenty(row['f12'])], ignore_index=True)
+        # 今日如果某个板块已经买过2只股票，则这个板块就不买了
+        if cache_manager.get_today_buy_board_id(row['f12']) >= 2:
+            continue
+        temp_df = stock_api.get_board_concept_stock_cons_top_twenty(row['f12'])
+        # 添加板块id列
+        temp_df['board_id'] = row['f12']
+        board_concept_stocks_df = pd.concat([board_concept_stocks_df, temp_df], ignore_index=True)
     board_concept_stocks_df = board_concept_stocks_df.drop_duplicates(subset='f12')
     # 排除昨日涨停的股票池, 首板
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(yesterday_limit_up_stocks['c'])]
@@ -83,6 +90,11 @@ def run_job(cache_manager):
     board_concept_stocks_df = pd.merge(board_concept_stocks_df, stock_gain_df, on='f12', how='inner')
     board_concept_stocks_df = pd.merge(board_concept_stocks_df, stock_speed_df, on='f12', how='inner')
 
+    # 排除今日已经买进的股票
+    board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(cache_manager.get_today_buy_stocks())]
+
+
+
     if board_concept_stocks_df.empty:
         logger.info("没有符合条件的股票")
         return
@@ -92,15 +104,28 @@ def run_job(cache_manager):
     for _, row in board_concept_stocks_df.iterrows():
         stock_code = row['f12']
         bid_df = stock_api.stock_bid_ask_em(symbol=stock_code)
-        zt_price = bid_df['f51']
-        # 1万元，以涨停价买入，买入数量为100及其整数倍
-        buy_num = int(10000 / zt_price) * 100
-        buy_resp = trade_api.buy_stock(stock_code=stock_code,price=zt_price/100.0, amount=buy_num)
-        if buy_resp and buy_resp.get('code') == 0:
-            logger.info("买入成功，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price/100.0)
-            cache_manager.BALANCE = cache_manager.BALANCE - buy_num * zt_price/100.0
+        # 确保 zt_price 是一个有效的数值
+        if 'f51' in bid_df.columns:
+            zt_price = bid_df['f51'].values[0] if len(bid_df['f51'].values) > 0 else 0
         else:
-            logger.error("买入失败，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price/100.0)          
+            logger.warning(f"未能获取股票 {stock_code} 的涨停价格，跳过买入")
+            continue
+        # 1万元，以涨停价买入，买入数量为100及其整数倍
+        if zt_price > 0:
+            # 修改此处，确保 buy_num 是 100 的整数倍
+            buy_num = (int(10000 / zt_price) // 100) * 100
+            buy_resp = trade_api.buy_stock(stock_code=stock_code,price=zt_price, amount=buy_num)
+            if buy_resp and buy_resp.get('code') == 0:
+                logger.info("买入成功，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price)
+                balance = balance - buy_num * zt_price
+                cache_manager.set_balance(balance)
+                cache_manager.append_today_buy_stock(stock_code)
+                cache_manager.append_today_buy_board_id(row['board_id'])
+                logger.info("今天买入的股票池：%s", cache_manager.get_today_buy_stocks())         
+            else:
+                logger.error("买入失败，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price)
+        else:
+            logger.warning(f"股票 {stock_code} 的涨停价格为 0，跳过买入")
         # cache_manager.update_cache()
 
 if __name__ == "__main__":

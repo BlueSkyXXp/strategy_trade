@@ -1,3 +1,4 @@
+# from akshare.stock_feature.stock_board_concept_ths import stock
 import requests
 
 class TradeService:
@@ -67,3 +68,12 @@ if __name__ == "__main__":
     filled_orders = trade_service.get_filled_orders()
     if filled_orders:
         print(filled_orders)
+    stock_code = "600967"
+    zt_price = 13.0
+    buy_num = 700
+    buy_resp = trade_service.buy_stock(stock_code=stock_code,price=zt_price, amount=buy_num)
+    print(buy_resp)
+    if buy_resp and buy_resp.get('code') == 0:
+        print("成功下单")
+    else:
+        print("下单失败")
