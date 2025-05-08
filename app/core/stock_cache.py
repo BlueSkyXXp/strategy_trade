@@ -17,6 +17,9 @@ from app.core.stock_service import StockService
 class StockCache:
     # 类属性作为全局缓存
     YESTERDAY_LIMIT_UP_STOCKS = pd.DataFrame()  # 修改为 DataFrame 类型
+    # 昨日跌停股票池
+    YESTERDAY_LIMIT_DOWN_STOCKS = pd.DataFrame()
+
     POSITION = []
     BALANCE = 0
     # 新增交易日历缓存变量
@@ -27,6 +30,19 @@ class StockCache:
 
     # 今日买入板块id和数量，是个map
     TODAY_BUY_BOARD_IDS = {}
+
+    @classmethod
+    def get_yesterday_limit_down_stocks(cls):
+        """
+        从缓存中获取昨日跌停股票池
+        :return: 昨日跌停股票池的 DataFrame
+        """
+        try:
+            logger.info("成功从缓存获取昨日跌停股票池")
+            return cls.YESTERDAY_LIMIT_DOWN_STOCKS
+        except Exception as e:
+            logger.error(f"从缓存获取昨日跌停股票池时出错: {e}")
+            return pd.DataFrame()
 
     @classmethod
     def set_today_buy_board_id(cls, board_id, num):
@@ -178,6 +194,16 @@ class StockCache:
             else:
                 cls.YESTERDAY_LIMIT_UP_STOCKS = pd.DataFrame()
                 logger.warning("未能成功获取昨日涨停股票池，已清空缓存或使用原有缓存")
+
+            # 从 stock 服务获取昨日跌停股票池
+            limit_down_stocks_df = stock_service.get_stock_dt_pool(date=datetime.now().strftime('%Y%m%d'))
+            if isinstance(limit_down_stocks_df, pd.DataFrame) and not limit_down_stocks_df.empty:
+                cls.YESTERDAY_LIMIT_DOWN_STOCKS = limit_down_stocks_df
+                logger.info("成功更新昨日跌停股票池缓存")
+                logger.info(limit_down_stocks_df)
+            else:
+                cls.YESTERDAY_LIMIT_DOWN_STOCKS = pd.DataFrame()
+                logger.warning("未能成功获取昨日跌停股票池，已清空缓存或使用原有缓存")
 
             position_result = trade_service.get_position()
             if position_result and position_result.get('code') == 0:

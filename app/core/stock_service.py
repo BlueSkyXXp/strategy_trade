@@ -193,6 +193,33 @@ class StockService:
             print(f"请求昨日涨停股票数据时发生异常: {e}")
             return None
 
+    #  跌停股票池
+    def get_stock_dt_pool(self, date=None):
+        """
+        发送请求获取跌停股票数据
+        :return: 包含跌停股票数据的响应内容，如果请求失败则返回 None
+        """
+        # curl --location 'https://push2ex.eastmoney.com/getTopicDTPool?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt&Pageindex=0&pagesize=6&sort=fund%3Aasc&date=20250509'
+        param = {
+            "ut": "7eea3edcaed734bea9cbfc24409ed989",
+            "dpt": "wz.ztzt",
+            "Pageindex": "0",
+            "pagesize": "50",
+            "sort": "fund:asc",
+            "date": date
+        }
+        try:
+            response = requests.get(url=self.dt_pool_url, params=param, timeout=15)
+            resp_json = response.json()
+            if resp_json is None:
+                return None
+            if resp_json['data'] is None:
+                return None
+            return pd.DataFrame(resp_json['data']['pool'])
+        except requests.RequestException as e:
+            print(f"请求跌停股票数据时发生异常: {e}")
+            return None
+
     #  上证股票涨幅榜
     def get_stock_sh_zs_rank(self, date=None):
         """

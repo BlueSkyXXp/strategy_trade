@@ -41,6 +41,9 @@ def run_job(cache_manager):
     # 从缓存中加载昨日涨停股票池、持仓和余额信息
     yesterday_limit_up_stocks, position, balance = cache_manager.load_stocks_from_cache()
 
+    dt_limit_up_stocks = cache_manager.get_yesterday_limit_down_stocks()
+
+
     board_concept_df = stock_api.get_board_concept_stock_top_ten()
     if board_concept_df is None or not isinstance(board_concept_df, pd.DataFrame) or board_concept_df.empty:
         logger.error("未能获取有效的板块概念股票前十数据，跳过后续处理")
@@ -58,6 +61,8 @@ def run_job(cache_manager):
     board_concept_stocks_df = board_concept_stocks_df.drop_duplicates(subset='f12')
     # 排除昨日涨停的股票池, 首板
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(yesterday_limit_up_stocks['c'])]
+    # 排除跌停的股票池
+    board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(dt_limit_up_stocks['c'])]
 
     # 排除退市的票 ST * 退
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f14'].str.contains('ST')]
