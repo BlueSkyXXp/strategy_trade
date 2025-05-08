@@ -69,13 +69,13 @@ def run_job(cache_manager):
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f14'].str.contains('*', regex=False)]
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f14'].str.contains('退')]
 
-    # 保留流通市值10-30亿之间 或者200亿以上  f21是流通市值
+    # 保留流通市值10-30亿之间 或者200亿以上  
     board_concept_stocks_df = board_concept_stocks_df[((board_concept_stocks_df['f21'] >= 100000000) & (board_concept_stocks_df['f21'] <= 300000000)) | (board_concept_stocks_df['f21'] >= 2000000000)]
 
     # 排除科创板688开头 
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].str.startswith('688')]
 
-    # 主板（60或者00开头）涨幅大于等于9.5%， 创业板（30开头）涨幅大于等于19.5%     f12是股票代码
+    # 主板（60或者00开头）涨幅大于等于9.5%， 创业板（30开头）涨幅大于等于19.5%     
     board_concept_stocks_df['f3'] = pd.to_numeric(board_concept_stocks_df['f3'], errors='coerce')
     board_concept_stocks_df = board_concept_stocks_df.dropna(subset=['f3'])
     
@@ -87,6 +87,11 @@ def run_job(cache_manager):
     stock_gain_df = pd.DataFrame(stock_api.get_stock_sh_zs_rank())
     stock_gain_df = pd.concat([stock_gain_df, pd.DataFrame(stock_api.get_stock_sz_zs_rank())])
 
+    # 排除地天板， 主板振幅小于19%， 创业板振幅小于38% 
+    main_board_condition_stock_gain_df = (stock_gain_df['f12'].str.startswith('60') | stock_gain_df['f12'].str.startswith('00')) & (stock_gain_df['f7'] < 1900)
+    gem_condition_stock_gain_df = (stock_gain_df['f12'].str.startswith('30')) & (stock_gain_df['f7'] < 3800)
+    stock_gain_df = stock_gain_df[main_board_condition_stock_gain_df | gem_condition_stock_gain_df]
+
     # 获取涨速榜 上证前10只+深圳前10只
     stock_speed_df = pd.DataFrame(stock_api.get_stock_sh_zs_speed_rank())
     stock_speed_df = pd.concat([stock_speed_df, pd.DataFrame(stock_api.get_stock_sz_zs_speed_rank())])
@@ -97,8 +102,6 @@ def run_job(cache_manager):
 
     # 排除今日已经买进的股票
     board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(cache_manager.get_today_buy_stocks())]
-
-
 
     if board_concept_stocks_df.empty:
         logger.info("没有符合条件的股票")

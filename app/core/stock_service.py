@@ -9,6 +9,7 @@ class StockService:
     api_url = "https://push2.eastmoney.com/api/qt/clist/get"
     market_movement_url = "https://push2ex.eastmoney.com/getAllStockChanges"
     yesterday_zt_pool_url = "https://push2ex.eastmoney.com/getYesterdayZTPool"
+    dt_pool_url = "https://push2ex.eastmoney.com/getTopicDTPool"
 
     OPEN_TIME = (
         (datetime.time(9, 15, 0), datetime.time(11, 30, 0)),
@@ -382,7 +383,10 @@ if __name__ == "__main__":
     trade_candle = stock_service.get_recent_trading_calendar()
     print(trade_candle)
     # 格式得是20250429 str 今天的时间
-    # date = datetime.datetime.now().strftime("%Y%m%d")
+    date = datetime.datetime.now().strftime("%Y%m%d")
+    dt_stock_limit_up_stocks = stock_service.get_stock_dt_pool(date=date)
+    print(dt_stock_limit_up_stocks)
+
     # stock_data = stock_service.get_stock_yesterday_zt_pool(date=date)
     # print(stock_data)
 
