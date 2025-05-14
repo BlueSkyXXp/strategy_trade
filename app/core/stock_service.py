@@ -189,7 +189,16 @@ class StockService:
                 return None
             if resp_json['data'] is None:
                 return None
-            return pd.DataFrame(resp_json['data']['pool'])
+            per_page_num = len(resp_json['data']['pool'])
+            total_page = math.ceil(resp_json['data']['tc'] / per_page_num)
+            result = []
+            result.extend(pd.DataFrame(resp_json['data']['pool']))
+            for i in range(total_page):
+                param['Pageindex'] = str(i)
+                response = requests.get(url=self.yesterday_zt_pool_url, params=param, timeout=15)
+                resp_json = response.json()
+                result.extend(pd.DataFrame(resp_json['data']['pool']))
+            return result
         except requests.RequestException as e:
             print(f"请求昨日涨停股票数据时发生异常: {e}")
             return None
