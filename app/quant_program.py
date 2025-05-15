@@ -34,8 +34,8 @@ log_handler.setFormatter(log_formatter)
 logger.addHandler(log_handler)
 
 # 创建缓存类实例
-cache_manager = StockCache()
-# cache_manager.update_cache()
+context = StockCache()
+# context.update_cache()
 
 stock_api = stock_service.StockService()
 
@@ -44,12 +44,12 @@ scheduler = BackgroundScheduler()
 
 # 仅在工作日 9:15 获取昨日涨停股票池
 # 修改为不传入 misfire_grace_time 参数
-scheduler.add_job(cache_manager.update_cache, CronTrigger(day_of_week='mon-fri', hour=9, minute=15))
+scheduler.add_job(context.update_cache, CronTrigger(day_of_week='mon-fri', hour=9, minute=15))
 
 # 定义添加间隔任务的函数
 def add_interval_job():
     # 修改 args 参数，确保传递的是一个元组
-    scheduler.add_job(first_board.run_job, 'interval', seconds=10, args=(cache_manager,))
+    scheduler.add_job(first_board.handlebar, 'interval', seconds=10, args=(context,))
 
 
 # 仅在工作日 9:30 和 13:00 添加间隔任务
@@ -68,7 +68,7 @@ def remove_interval_jobs():
 scheduler.add_job(remove_interval_jobs, CronTrigger(day_of_week='mon-fri', hour=11, minute=30))
 scheduler.add_job(remove_interval_jobs, CronTrigger(day_of_week='mon-fri', hour=15, minute=0))
 
-cache_manager.update_cache()
+context.update_cache()
 
 scheduler.start()
 

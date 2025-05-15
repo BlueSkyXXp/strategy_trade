@@ -13,12 +13,12 @@ logger = setup_logger(__name__)
 stock_api = StockService()
 trade_api = trade_service.TradeService()
 
-def run_job(cache_manager):
+def handlebar(context):
     logger.info("开始交易-----")
-    trading_calendar = cache_manager.get_trading_calendar()
+    trading_calendar = context.get_trading_calendar()
     if trading_calendar.empty:
         trading_calendar = stock_api.is_trade_date(date=datetime.now().strftime('%Y-%m-%d'))
-        cache_manager.update_trading_calendar()
+        context.update_trading_calendar()
     if  trading_calendar.empty:
         logger.info("非交易日，不执行策略")
         return
@@ -39,9 +39,9 @@ def run_job(cache_manager):
 
     logger.info("在交易时间，执行策略")
     # 从缓存中加载昨日涨停股票池、持仓和余额信息
-    yesterday_limit_up_stocks, position, balance = cache_manager.load_stocks_from_cache()
+    yesterday_limit_up_stocks, position, balance = context.load_stocks_from_cache()
 
-    dt_limit_up_stocks = cache_manager.get_yesterday_limit_down_stocks()
+    dt_limit_up_stocks = context.get_yesterday_limit_down_stocks()
 
 
     board_concept_df = stock_api.get_board_concept_stock_top_ten()
@@ -52,7 +52,7 @@ def run_job(cache_manager):
     board_concept_stocks_df = pd.DataFrame()
     for _, row in board_concept_df.iterrows():
         # 今日如果某个板块已经买过2只股票，则这个板块就不买了
-        if cache_manager.get_today_buy_board_id(row['f12']) >= 2:
+        if context.get_today_buy_board_id(row['f12']) >= 2:
             continue
         temp_df = stock_api.get_board_concept_stock_cons_top_twenty(row['f12'])
         # 添加板块id列
@@ -101,7 +101,7 @@ def run_job(cache_manager):
     board_concept_stocks_df = pd.merge(board_concept_stocks_df, stock_speed_df, on='f12', how='inner')
 
     # 排除今日已经买进的股票
-    board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(cache_manager.get_today_buy_stocks())]
+    board_concept_stocks_df = board_concept_stocks_df[~board_concept_stocks_df['f12'].isin(context.get_today_buy_stocks())]
 
     if board_concept_stocks_df.empty:
         logger.info("没有符合条件的股票")
@@ -126,15 +126,15 @@ def run_job(cache_manager):
             if buy_resp and buy_resp.get('code') == 0:
                 logger.info("买入成功，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price)
                 balance = balance - buy_num * zt_price
-                cache_manager.set_balance(balance)
-                cache_manager.append_today_buy_stock(stock_code)
-                cache_manager.append_today_buy_board_id(row['board_id'])
-                logger.info("今天买入的股票池：%s", cache_manager.get_today_buy_stocks())         
+                context.set_balance(balance)
+                context.append_today_buy_stock(stock_code)
+                context.append_today_buy_board_id(row['board_id'])
+                logger.info("今天买入的股票池：%s", context.get_today_buy_stocks())         
             else:
                 logger.error("买入失败，股票代码：%s,买入数量：%s,买入价格:%s", stock_code, buy_num, zt_price)
         else:
             logger.warning(f"股票 {stock_code} 的涨停价格为 0，跳过买入")
-        # cache_manager.update_cache()
+        # context.update_cache()
 
 if __name__ == "__main__":
     stock_a_df = ak.stock_zh_a_hist(symbol='002734', period='daily', start_date='20250401', end_date='20250430')
@@ -185,6 +185,6 @@ if __name__ == "__main__":
     # ak.stock_zh_a_hist()  历史数据
     # ak.stock_zh_a_spot_em()  # 实时数据
     # akshare.stock_bid_ask_em()
-    # cache_manager = StockCache()
-    # cache_manager.update_cache()
-    # run_job(cache_manager)
+    # context = StockCache()
+    # context.update_cache()
+    # run_job(context)
