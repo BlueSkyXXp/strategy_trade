@@ -3,7 +3,7 @@ import requests
 
 class TradeService:
     def __init__(self):
-        self.base_url = 'http://10.37.81.24:5000'
+        self.base_url = 'http://127.0.0.1:5000'
         self.headers = {
             'Authorization': 'Bearer DSTdqw3Poq1mBzjY8OEUv6Zjl1JAHYoc'
         }

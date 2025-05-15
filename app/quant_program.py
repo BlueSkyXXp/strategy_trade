@@ -55,7 +55,7 @@ def add_interval_job():
 # 仅在工作日 9:30 和 13:00 添加间隔任务
 scheduler.add_job(add_interval_job, CronTrigger(day_of_week='mon-fri', hour=9, minute=30))
 scheduler.add_job(add_interval_job, CronTrigger(day_of_week='mon-fri', hour=13, minute=0))
-# scheduler.add_job(add_interval_job, CronTrigger(day_of_week='mon-fri', hour=17, minute=21))
+# scheduler.add_job(add_interval_job, CronTrigger(day_of_week='mon-fri', hour=10, minute=0))
 
 # 仅在工作日 11:30 和 15:00 移除间隔任务
 def remove_interval_jobs():

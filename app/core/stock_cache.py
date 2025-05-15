@@ -84,10 +84,7 @@ class StockCache:
         """
         try:
             result = cls.TODAY_BUY_BOARD_IDS.get(board_id, 0)
-            if result == 0:
-                logger.info(f"板块 {board_id} 今日买入股票数量不存在，返回默认值 0")
-            else:
-                logger.info(f"成功从缓存获取板块 {board_id} 的今日买入股票数量为 {result}")
+        
             return result
         except Exception as e:
             logger.error(f"从缓存获取板块 {board_id} 的今日买入股票数量时出错: {e}")

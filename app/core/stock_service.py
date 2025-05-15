@@ -3,6 +3,7 @@ import datetime
 import pandas as pd
 import requests
 import akshare as ak
+import math
 
 class StockService:
     # 替换为实际的 API 地址
